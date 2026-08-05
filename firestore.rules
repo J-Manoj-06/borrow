@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // ----------------------------------------------------
+    // YOUR EXISTING APP COLLECTIONS
+    // ----------------------------------------------------
+    match /users/{userId} {
+      allow read: if signedIn() || (request.query.limit <= 1 && request.query.filters[0].field == 'phoneNumber');
+      allow create: if isSelf(userId);
+      allow update: if isSelf(userId);
+      allow delete: if false;
+    }
+
+    match /machineries/{machineryId} {
+      allow read: if true;
+      allow create, update, delete: if signedIn();
+    }
+
+    match /equipments/{equipmentId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /equipment/{equipmentId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.owner_user_id == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.owner_user_id == request.auth.uid || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'savedBy'])
+      );
+      allow delete: if signedIn() && resource.data.owner_user_id == request.auth.uid;
+    }
+
+    match /marketplace_surplus/{surplusId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /farm_surplus_exchange/{exchangeId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.machineryId is string
+      );
+      allow update: if signedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid
+      );
+      allow delete: if false;
+    }
+
+    match /shared_links_analytics/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    // ----------------------------------------------------
+    // BORROW LIBRARY ADMIN PORTAL COLLECTIONS
+    // ----------------------------------------------------
+    match /admins/{adminId} {
+      allow read, write: if signedIn();
+    }
+
+    match /books/{bookId} {
+      allow read, write: if signedIn();
+    }
+
+    match /bookCopies/{copyId} {
+      allow read, write: if signedIn();
+    }
+
+    match /students/{studentId} {
+      allow read, write: if signedIn();
+    }
+
+    match /borrowRequests/{requestId} {
+      allow read, write: if signedIn();
+    }
+
+    match /borrow_requests/{requestId} {
+      allow read, write: if signedIn();
+    }
+
+    match /transactions/{transactionId} {
+      allow read, write: if signedIn();
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if signedIn();
+    }
+
+    match /announcements/{announcementId} {
+      allow read, write: if signedIn();
+    }
+
+    match /activityLogs/{logId} {
+      allow read, write: if signedIn();
+    }
+
+    match /activity_logs/{logId} {
+      allow read, write: if signedIn();
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if signedIn();
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if signedIn();
+    }
+
+    match /scan_history/{scanId} {
+      allow read, write: if signedIn();
+    }
+  }
+}
