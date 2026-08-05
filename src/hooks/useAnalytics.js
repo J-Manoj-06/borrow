@@ -7,6 +7,7 @@ function parseDate(val) {
   const d = new Date(val);
   return isNaN(d.getTime()) ? null : d;
 }
+//hryfr
 
 function isDateInHorizon(dateObj, horizon) {
   if (!dateObj) return horizon === 'all';
