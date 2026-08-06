@@ -2,7 +2,9 @@ import React from 'react';
 import Card from '../Card';
 import Avatar from '../Avatar';
 import Button from '../Button';
+import Badge from '../Badge';
 import RequestStatusBadge from './RequestStatusBadge';
+import { isPendingRequest, isApprovedRequest, isRejectedRequest } from '../../utils/requestHelpers';
 import { FiBook, FiCheck, FiX, FiEye } from 'react-icons/fi';
 
 export const RequestCard = ({
@@ -17,7 +19,9 @@ export const RequestCard = ({
     return new Date(val).toLocaleDateString();
   };
 
-  const isPending = (request.status || 'Pending').toLowerCase() === 'pending';
+  const isPending = isPendingRequest(request.status);
+  const isApproved = isApprovedRequest(request.status);
+  const isRejected = isRejectedRequest(request.status);
 
   return (
     <Card hoverable className="p-4 space-y-4">
@@ -51,6 +55,7 @@ export const RequestCard = ({
       </div>
 
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#2A2A2A]">
+        {/* View Button */}
         <Button
           variant="secondary"
           size="sm"
@@ -58,35 +63,47 @@ export const RequestCard = ({
           onClick={() => onInspect(request)}
           className="text-[11px] px-2.5 py-1"
         >
-          Inspect
+          View
         </Button>
+
+        {/* Pending Actions */}
         {isPending && (
           <>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={FiX}
-              onClick={() => {
-                onInspect(request);
-                onReject(request);
-              }}
-              className="text-[11px] px-2.5 py-1 text-[#EF4444] hover:bg-red-950/40"
+            <button
+              type="button"
+              onClick={() => onApprove(request)}
+              className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#22C55E] text-black hover:bg-green-400 active:scale-95 transition-all shadow-sm"
             >
-              Reject
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={FiCheck}
-              onClick={() => {
-                onInspect(request);
-                onApprove(request);
-              }}
-              className="text-[11px] px-2.5 py-1"
+              <FiCheck className="w-3.5 h-3.5" />
+              <span>Approve</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onReject(request)}
+              className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#EF4444] text-white hover:bg-red-600 active:scale-95 transition-all shadow-sm"
             >
-              Approve
-            </Button>
+              <FiX className="w-3.5 h-3.5" />
+              <span>Reject</span>
+            </button>
           </>
+        )}
+
+        {/* Approved Read-Only State */}
+        {isApproved && (
+          <div className="flex flex-col items-end shrink-0">
+            <Badge variant="success" size="sm">Approved</Badge>
+            <span className="text-[9px] text-[#A1A1AA] mt-0.5 font-medium">Waiting for Issue</span>
+          </div>
+        )}
+
+        {/* Rejected Read-Only State */}
+        {isRejected && (
+          <div className="flex flex-col items-end shrink-0 max-w-[140px]">
+            <Badge variant="danger" size="sm">Rejected</Badge>
+            <span className="text-[9px] text-[#EF4444] mt-0.5 truncate font-medium" title={request.rejectionReason}>
+              {request.rejectionReason || request.rejectReason || 'Declined'}
+            </span>
+          </div>
         )}
       </div>
     </Card>

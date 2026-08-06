@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import useNotifications from '../hooks/useNotifications';
+import useDashboardData from '../hooks/useDashboardData';
 import Avatar from '../components/Avatar';
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const { stats } = useNotifications();
+  const { stats: dashStats } = useDashboardData();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -76,6 +78,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isNotif = item.path === '/notifications';
+          const isRequests = item.path === '/borrow-requests';
 
           return (
             <NavLink
@@ -108,6 +111,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
                   {isNotif && stats.unreadCount > 0 && (
                     <span className="px-1.5 py-0.5 rounded-full bg-[#EF4444] text-white text-[10px] font-bold">
                       {stats.unreadCount}
+                    </span>
+                  )}
+
+                  {isRequests && dashStats.pendingRequests > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-[#F59E0B] text-black text-[10px] font-bold">
+                      {dashStats.pendingRequests}
                     </span>
                   )}
                 </>

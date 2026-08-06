@@ -1,27 +1,31 @@
 import React from 'react';
 import Badge from '../Badge';
+import { getNormalizedRequestStatus } from '../../utils/requestHelpers';
 
 export const RequestStatusBadge = ({ status = 'Pending' }) => {
-  const getBadgeConfig = (st = '') => {
-    switch (st.toLowerCase()) {
+  const normalizedLabel = getNormalizedRequestStatus(status);
+
+  const getBadgeVariant = (label = '') => {
+    switch (label.toLowerCase()) {
       case 'approved':
-        return { variant: 'success', label: 'Approved' };
+        return 'success';
       case 'rejected':
-        return { variant: 'danger', label: 'Rejected' };
+        return 'danger';
       case 'cancelled':
-        return { variant: 'neutral', label: 'Cancelled' };
+        return 'neutral';
       case 'returned':
-        return { variant: 'neutral', label: 'Returned' };
+        return 'neutral';
       case 'expired':
-        return { variant: 'danger', label: 'Expired' };
+        return 'danger';
+      case 'pending':
       default:
-        return { variant: 'warning', label: 'Pending' };
+        return 'warning';
     }
   };
 
-  const config = getBadgeConfig(status);
+  const variant = getBadgeVariant(normalizedLabel);
 
-  return <Badge variant={config.variant} size="sm">{config.label}</Badge>;
+  return <Badge variant={variant} size="sm">{normalizedLabel}</Badge>;
 };
 
 export default RequestStatusBadge;

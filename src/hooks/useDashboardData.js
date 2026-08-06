@@ -122,20 +122,41 @@ export const useDashboardData = () => {
     // 3. Subscribe to Borrow Requests
     const unsubReqs = subscribeToBorrowRequests(
       (reqsData) => {
-        const pending = reqsData.filter(r => (r.status || 'Pending').toLowerCase() === 'pending').length;
+        const isPending = (status) => {
+          if (!status) return true;
+          const s = String(status).trim().toLowerCase();
+          return s === 'pending' || s === 'requested' || s === 'request';
+        };
+
+        const pending = reqsData.filter(r => isPending(r.status)).length;
         setStats(prev => ({
           ...prev,
           pendingRequests: pending,
         }));
 
+        // Sort pending requests first, newest first
         const sortedReqs = [...reqsData]
+          .filter(r => isPending(r.status))
           .sort((a, b) => {
             const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
             const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
             return timeB - timeA;
           })
           .slice(0, 5);
-        setRecentRequests(sortedReqs);
+
+        // If no pending requests, fallback to latest requests overall
+        if (sortedReqs.length === 0 && reqsData.length > 0) {
+          const fallbackReqs = [...reqsData]
+            .sort((a, b) => {
+              const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+              const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+              return timeB - timeA;
+            })
+            .slice(0, 5);
+          setRecentRequests(fallbackReqs);
+        } else {
+          setRecentRequests(sortedReqs);
+        }
 
         checkLoadingDone();
       },

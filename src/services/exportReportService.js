@@ -52,7 +52,13 @@ export async function generateAndDownloadExcelReport() {
       const st = (t.status || '').toLowerCase();
       return st === 'issued' || st === 'extended';
     }).length;
-    const pendingRequestsCount = requests.filter((r) => (r.status || '').toLowerCase() === 'pending').length;
+    const isPending = (status) => {
+      if (!status) return true;
+      const s = String(status).trim().toLowerCase();
+      return s === 'pending' || s === 'requested' || s === 'request';
+    };
+
+    const pendingRequestsCount = requests.filter((r) => isPending(r.status)).length;
 
     const summaryData = [
       { Metric: 'Total Books', Value: totalBooksCount || books.length },
@@ -93,7 +99,7 @@ export async function generateAndDownloadExcelReport() {
       : [{ 'Student Name': 'No Data Available', 'Book Title': '-', 'Issue Date': '-', 'Due Date': '-', Status: '-' }];
 
     // 5. Prepare Sheet 4: Pending Requests
-    const pendingReqsList = requests.filter((r) => (r.status || '').toLowerCase() === 'pending');
+    const pendingReqsList = requests.filter((r) => isPending(r.status));
 
     const pendingRequestsData = pendingReqsList.length > 0
       ? pendingReqsList.map((r) => ({

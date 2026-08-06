@@ -20,6 +20,9 @@ export const BorrowRequests = () => {
     loading,
     error,
     stats,
+    statsLoading,
+    statsError,
+    refreshStatsStream,
     searchQuery,
     setSearchQuery,
     statusFilter,
@@ -31,6 +34,7 @@ export const BorrowRequests = () => {
     sortBy,
     setSortBy,
     selectedRequest,
+    setSelectedRequest,
     bookAvailability,
     isCheckingBook,
     handleOpenDrawer,
@@ -50,6 +54,7 @@ export const BorrowRequests = () => {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
+    refreshStatsStream();
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
@@ -111,7 +116,7 @@ export const BorrowRequests = () => {
       )}
 
       {/* Realtime Summary Metrics */}
-      <RequestStats stats={stats} />
+      <RequestStats stats={stats} loading={statsLoading} error={statsError} />
 
       {/* Toolbar & Filter Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 bg-[#111111] p-4 rounded-2xl border border-[#2A2A2A]">
@@ -199,11 +204,11 @@ export const BorrowRequests = () => {
               requests={requests}
               onInspect={handleOpenDrawer}
               onApprove={(r) => {
-                handleOpenDrawer(r);
+                setSelectedRequest(r);
                 setShowApproveModal(true);
               }}
               onReject={(r) => {
-                handleOpenDrawer(r);
+                setSelectedRequest(r);
                 setShowRejectModal(true);
               }}
             />
@@ -217,11 +222,11 @@ export const BorrowRequests = () => {
                 request={r}
                 onInspect={handleOpenDrawer}
                 onApprove={(req) => {
-                  handleOpenDrawer(req);
+                  setSelectedRequest(req);
                   setShowApproveModal(true);
                 }}
                 onReject={(req) => {
-                  handleOpenDrawer(req);
+                  setSelectedRequest(req);
                   setShowRejectModal(true);
                 }}
               />

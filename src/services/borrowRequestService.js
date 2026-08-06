@@ -10,7 +10,6 @@ import { db } from './firebase';
 
 /**
  * Subscribe to realtime updates for the borrow_requests collection.
- * Validates that each request's bookId exists in books collection.
  * @param {function} callback 
  * @param {function} onError 
  */
@@ -74,18 +73,22 @@ export async function fetchBookAvailability(bookId) {
 
 /**
  * Approve a borrow request.
- * Sets status='Approved', approvedBy=librarianId, approvedAt=now.
+ * Sets status='Approved', approvedBy=adminUid, approvedByName=adminName, approvedAt=now.
  * (Does NOT reduce stock or create transactions yet).
  * @param {string} requestId 
- * @param {string} librarianId 
+ * @param {object|string} adminUser 
  */
-export async function approveBorrowRequest(requestId, librarianId = 'Librarian') {
+export async function approveBorrowRequest(requestId, adminUser = 'Librarian') {
   if (!requestId) throw new Error('Missing request ID');
   try {
     const docRef = doc(db, 'borrow_requests', requestId);
+    const adminUid = typeof adminUser === 'object' ? (adminUser?.uid || adminUser?.email || 'Librarian') : adminUser;
+    const adminName = typeof adminUser === 'object' ? (adminUser?.displayName || adminUser?.name || adminUser?.email?.split('@')[0] || 'Librarian') : adminUser;
+
     await updateDoc(docRef, {
       status: 'Approved',
-      approvedBy: librarianId,
+      approvedBy: adminUid,
+      approvedByName: adminName,
       approvedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -97,18 +100,22 @@ export async function approveBorrowRequest(requestId, librarianId = 'Librarian')
 
 /**
  * Reject a borrow request with reason.
- * Sets status='Rejected', rejectedBy=librarianId, rejectedAt=now, rejectionReason=reason.
+ * Sets status='Rejected', rejectedBy=adminUid, rejectedByName=adminName, rejectedAt=now, rejectionReason=reason.
  * @param {string} requestId 
  * @param {string} reason 
- * @param {string} librarianId 
+ * @param {object|string} adminUser 
  */
-export async function rejectBorrowRequest(requestId, reason = 'Out of Stock', librarianId = 'Librarian') {
+export async function rejectBorrowRequest(requestId, reason = 'Out of Stock', adminUser = 'Librarian') {
   if (!requestId) throw new Error('Missing request ID');
   try {
     const docRef = doc(db, 'borrow_requests', requestId);
+    const adminUid = typeof adminUser === 'object' ? (adminUser?.uid || adminUser?.email || 'Librarian') : adminUser;
+    const adminName = typeof adminUser === 'object' ? (adminUser?.displayName || adminUser?.name || adminUser?.email?.split('@')[0] || 'Librarian') : adminUser;
+
     await updateDoc(docRef, {
       status: 'Rejected',
-      rejectedBy: librarianId,
+      rejectedBy: adminUid,
+      rejectedByName: adminName,
       rejectedAt: serverTimestamp(),
       rejectionReason: reason,
       updatedAt: serverTimestamp(),

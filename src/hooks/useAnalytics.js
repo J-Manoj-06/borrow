@@ -103,7 +103,13 @@ export const useAnalytics = () => {
     const totalUsers = users.length;
     const totalTransactions = horizonTransactions.length;
 
-    const pendingRequests = requests.filter((r) => (r.status || '').toLowerCase() === 'pending').length;
+    const isPending = (status) => {
+      if (!status) return true;
+      const s = String(status).trim().toLowerCase();
+      return s === 'pending' || s === 'requested' || s === 'request';
+    };
+
+    const pendingRequests = requests.filter((r) => isPending(r.status)).length;
     const approvedRequests = requests.filter((r) => (r.status || '').toLowerCase() === 'approved').length;
 
     const returnedToday = transactions.filter((t) => {

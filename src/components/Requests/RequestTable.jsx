@@ -2,8 +2,10 @@ import React from 'react';
 import Card from '../Card';
 import Avatar from '../Avatar';
 import Button from '../Button';
+import Badge from '../Badge';
 import RequestStatusBadge from './RequestStatusBadge';
 import EmptyState from '../EmptyState';
+import { isPendingRequest, isApprovedRequest, isRejectedRequest } from '../../utils/requestHelpers';
 import { FiBook, FiCheck, FiX, FiEye, FiClock } from 'react-icons/fi';
 
 export const RequestTable = ({
@@ -22,8 +24,8 @@ export const RequestTable = ({
     return (
       <EmptyState
         icon={FiClock}
-        title="No pending borrow requests."
-        description="Incoming book request documents submitted from mobile app users will appear here in real time."
+        title="No borrow requests found."
+        description="Book borrowing request documents submitted from mobile app users will appear here in real time."
       />
     );
   }
@@ -45,10 +47,13 @@ export const RequestTable = ({
           </thead>
           <tbody className="divide-y divide-[#2A2A2A]">
             {requests.map((req) => {
-              const isPending = (req.status || 'Pending').toLowerCase() === 'pending';
+              const isPending = isPendingRequest(req.status);
+              const isApproved = isApprovedRequest(req.status);
+              const isRejected = isRejectedRequest(req.status);
 
               return (
                 <tr key={req.id} className="hover:bg-[#1E1E1E]/60 transition-colors">
+                  {/* Student Info */}
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
                       <Avatar name={req.studentName || req.requestedBy || 'Student'} size="sm" />
@@ -58,9 +63,13 @@ export const RequestTable = ({
                       </div>
                     </div>
                   </td>
+
+                  {/* Department */}
                   <td className="py-3.5 px-4 text-[#A1A1AA]">
                     {req.department || 'General'}
                   </td>
+
+                  {/* Book Info */}
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3 max-w-[220px]">
                       <div className="w-8 h-11 rounded bg-[#111111] border border-[#2A2A2A] overflow-hidden flex items-center justify-center shrink-0">
@@ -75,17 +84,26 @@ export const RequestTable = ({
                       </span>
                     </div>
                   </td>
+
+                  {/* ISBN */}
                   <td className="py-3.5 px-4 font-mono text-[11px] text-[#A1A1AA]">
                     {req.isbn || 'N/A'}
                   </td>
+
+                  {/* Request Date */}
                   <td className="py-3.5 px-4 text-[#A1A1AA]">
                     {formatDate(req.requestDate || req.createdAt)}
                   </td>
+
+                  {/* Status Badge */}
                   <td className="py-3.5 px-4">
                     <RequestStatusBadge status={req.status} />
                   </td>
+
+                  {/* Actions Column */}
                   <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex items-center justify-end gap-2">
+                      {/* View Button */}
                       <Button
                         variant="secondary"
                         size="sm"
@@ -93,37 +111,47 @@ export const RequestTable = ({
                         onClick={() => onInspect(req)}
                         className="text-[11px] px-2.5 py-1"
                       >
-                        Inspect
+                        View
                       </Button>
 
+                      {/* Pending Actions: Approve (Green) & Reject (Red) */}
                       {isPending && (
                         <>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            icon={FiX}
-                            onClick={() => {
-                              onInspect(req);
-                              onReject(req);
-                            }}
-                            className="text-[11px] px-2.5 py-1 text-[#EF4444] hover:bg-red-950/40"
+                          <button
+                            type="button"
+                            onClick={() => onApprove(req)}
+                            className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#22C55E] text-black hover:bg-green-400 active:scale-95 transition-all shadow-sm"
                           >
-                            Reject
-                          </Button>
-
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            icon={FiCheck}
-                            onClick={() => {
-                              onInspect(req);
-                              onApprove(req);
-                            }}
-                            className="text-[11px] px-2.5 py-1"
+                            <FiCheck className="w-3.5 h-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onReject(req)}
+                            className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#EF4444] text-white hover:bg-red-600 active:scale-95 transition-all shadow-sm"
                           >
-                            Approve
-                          </Button>
+                            <FiX className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
                         </>
+                      )}
+
+                      {/* Approved Read-Only State */}
+                      {isApproved && (
+                        <div className="flex flex-col items-end shrink-0">
+                          <Badge variant="success" size="sm">Approved</Badge>
+                          <span className="text-[9px] text-[#A1A1AA] mt-0.5 font-medium">Waiting for Issue</span>
+                        </div>
+                      )}
+
+                      {/* Rejected Read-Only State */}
+                      {isRejected && (
+                        <div className="flex flex-col items-end shrink-0 max-w-[130px]">
+                          <Badge variant="danger" size="sm">Rejected</Badge>
+                          <span className="text-[9px] text-[#EF4444] mt-0.5 truncate font-medium" title={req.rejectionReason}>
+                            {req.rejectionReason || req.rejectReason || 'Declined'}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </td>

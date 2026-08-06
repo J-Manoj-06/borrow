@@ -6,11 +6,24 @@ import {
   rejectBorrowRequest 
 } from '../services/borrowRequestService';
 import { subscribeToBooksInventory } from '../services/inventoryService';
+import { useBorrowRequestStats } from './useBorrowRequestStats';
 import { useAuth } from './useAuth';
 import { toast } from 'react-hot-toast';
+import { isPendingRequest, isApprovedRequest, isRejectedRequest } from '../utils/requestHelpers';
 
 export const useBorrowRequests = () => {
   const { user } = useAuth();
+
+  // Firestore statistics hook
+  const {
+    pendingCount,
+    approvedTodayCount,
+    rejectedTodayCount,
+    processedTodayCount,
+    loading: statsLoading,
+    error: statsError,
+    refreshStream: refreshStatsStream,
+  } = useBorrowRequestStats();
 
   const [rawRequests, setRawRequests] = useState([]);
   const [booksCatalog, setBooksCatalog] = useState([]);
@@ -32,7 +45,7 @@ export const useBorrowRequests = () => {
   // Action Modals State
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState('Out of Stock');
+  const [rejectReason, setRejectReason] = useState('Book Currently Unavailable');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Subscriptions
@@ -62,38 +75,51 @@ export const useBorrowRequests = () => {
     };
   }, []);
 
-  // Filter requests to only include valid books uploaded by librarians
+  // Filter and enrich requests with book information (ISBN, cover, title) from catalog if missing on request
   const validRequests = useMemo(() => {
-    if (booksCatalog.length === 0) return rawRequests;
+    const booksMap = new Map();
+    booksCatalog.forEach((b) => {
+      if (b.id) booksMap.set(b.id, b);
+    });
+
     const validBookIds = new Set(booksCatalog.map((b) => b.id));
-    return rawRequests.filter((req) => !req.bookId || validBookIds.has(req.bookId));
+    const baseList = booksCatalog.length === 0
+      ? rawRequests
+      : rawRequests.filter((req) => !req.bookId || validBookIds.has(req.bookId));
+
+    return baseList.map((req) => {
+      const matchedBook = req.bookId ? booksMap.get(req.bookId) : null;
+
+      // Resolve ISBN across request properties & matched catalog book
+      const resolvedIsbn =
+        (req.isbn && req.isbn !== 'N/A' && req.isbn !== 'null' && req.isbn !== 'undefined') ? req.isbn :
+        (req.bookIsbn && req.bookIsbn !== 'N/A') ? req.bookIsbn :
+        (matchedBook?.isbn && matchedBook?.isbn !== 'N/A') ? matchedBook.isbn :
+        (matchedBook?.ISBN && matchedBook?.ISBN !== 'N/A') ? matchedBook.ISBN :
+        (req.isbn || 'N/A');
+
+      const resolvedTitle = req.bookTitle || req.title || matchedBook?.title || 'Untitled Book';
+      const resolvedCover = req.bookCover || req.cover || matchedBook?.coverImage || matchedBook?.cover || matchedBook?.imageUrl || '';
+      const resolvedCategory = req.category || matchedBook?.category || 'General';
+      const resolvedDepartment = req.department || matchedBook?.department || 'General';
+
+      return {
+        ...req,
+        isbn: resolvedIsbn,
+        bookTitle: resolvedTitle,
+        bookCover: resolvedCover,
+        category: resolvedCategory,
+        department: resolvedDepartment,
+      };
+    });
   }, [rawRequests, booksCatalog]);
 
-  // Compute Summary Statistics
-  const stats = useMemo(() => {
-    const todayStr = new Date().toDateString();
-
-    const pendingCount = validRequests.filter((r) => (r.status || 'Pending').toLowerCase() === 'pending').length;
-
-    const approvedTodayCount = validRequests.filter((r) => {
-      if (r.status !== 'Approved') return false;
-      const d = r.approvedAt ? (r.approvedAt.toDate ? r.approvedAt.toDate() : new Date(r.approvedAt)) : null;
-      return d && d.toDateString() === todayStr;
-    }).length;
-
-    const rejectedTodayCount = validRequests.filter((r) => {
-      if (r.status !== 'Rejected') return false;
-      const d = r.rejectedAt ? (r.rejectedAt.toDate ? r.rejectedAt.toDate() : new Date(r.rejectedAt)) : null;
-      return d && d.toDateString() === todayStr;
-    }).length;
-
-    return {
-      pendingCount,
-      approvedTodayCount,
-      rejectedTodayCount,
-      processedTodayCount: approvedTodayCount + rejectedTodayCount,
-    };
-  }, [validRequests]);
+  const stats = useMemo(() => ({
+    pendingCount,
+    approvedTodayCount,
+    rejectedTodayCount,
+    processedTodayCount,
+  }), [pendingCount, approvedTodayCount, rejectedTodayCount, processedTodayCount]);
 
   // Filtered & Searched Requests List
   const filteredRequests = useMemo(() => {
@@ -114,7 +140,14 @@ export const useBorrowRequests = () => {
 
       // 2. Status Filter
       if (statusFilter !== 'All') {
-        if ((req.status || 'Pending').toLowerCase() !== statusFilter.toLowerCase()) {
+        const filterSt = statusFilter.toLowerCase();
+        if (filterSt === 'pending') {
+          if (!isPendingRequest(req.status)) return false;
+        } else if (filterSt === 'approved') {
+          if (!isApprovedRequest(req.status)) return false;
+        } else if (filterSt === 'rejected') {
+          if (!isRejectedRequest(req.status)) return false;
+        } else if ((req.status || '').toLowerCase() !== filterSt) {
           return false;
         }
       }
@@ -165,28 +198,31 @@ export const useBorrowRequests = () => {
     if (!selectedRequest) return;
     setIsProcessing(true);
     try {
-      await approveBorrowRequest(selectedRequest.id, user?.email || 'Librarian');
-      toast.success(`Request for "${selectedRequest.bookTitle}" approved!`);
+      await approveBorrowRequest(selectedRequest.id, user || 'Librarian');
+      toast.success('Borrow request approved.');
       setShowApproveModal(false);
       handleCloseDrawer();
     } catch (err) {
-      toast.error(err?.message || 'Failed to approve request.');
+      console.error('Approval failed:', err);
+      toast.error(err?.message || 'Failed to approve borrow request.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   // Execute Reject Request
-  const handleConfirmReject = async () => {
+  const handleConfirmReject = async (overrideReason) => {
     if (!selectedRequest) return;
     setIsProcessing(true);
+    const finalReason = typeof overrideReason === 'string' ? overrideReason : rejectReason;
     try {
-      await rejectBorrowRequest(selectedRequest.id, rejectReason, user?.email || 'Librarian');
-      toast.success(`Request rejected: ${rejectReason}`);
+      await rejectBorrowRequest(selectedRequest.id, finalReason, user || 'Librarian');
+      toast.success('Borrow request rejected.');
       setShowRejectModal(false);
       handleCloseDrawer();
     } catch (err) {
-      toast.error(err?.message || 'Failed to reject request.');
+      console.error('Rejection failed:', err);
+      toast.error(err?.message || 'Failed to reject borrow request.');
     } finally {
       setIsProcessing(false);
     }
@@ -198,6 +234,9 @@ export const useBorrowRequests = () => {
     loading,
     error,
     stats,
+    statsLoading,
+    statsError,
+    refreshStatsStream,
     searchQuery,
     setSearchQuery,
     statusFilter,
@@ -209,6 +248,7 @@ export const useBorrowRequests = () => {
     sortBy,
     setSortBy,
     selectedRequest,
+    setSelectedRequest,
     bookAvailability,
     isCheckingBook,
     handleOpenDrawer,

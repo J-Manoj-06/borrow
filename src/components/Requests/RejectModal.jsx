@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import Button from '../Button';
+import Input from '../Input';
 import { FiXCircle } from 'react-icons/fi';
 
 const rejectReasons = [
-  'Out of Stock',
+  'Book Currently Unavailable',
+  'Maximum Borrow Limit Reached',
   'Book Reserved',
-  'Damaged',
+  'Damaged Book',
   'Invalid Request',
-  'Maximum Borrow Limit',
   'Other',
 ];
 
@@ -21,20 +22,37 @@ export const RejectModal = ({
   isProcessing,
   onConfirm,
 }) => {
+  const [customReason, setCustomReason] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setCustomReason('');
+    }
+  }, [isOpen]);
+
   if (!request) return null;
+
+  const handleFormSubmit = () => {
+    const finalReason = rejectReason === 'Other' ? (customReason.trim() || 'Other Reason') : rejectReason;
+    onConfirm(finalReason);
+  };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Confirm Borrow Request Rejection"
+      title="Reject Borrow Request"
       maxWidth="max-w-md"
     >
       <div className="space-y-4 text-xs text-white">
-        <div className="p-4 rounded-xl bg-red-950/40 border border-red-800/40 text-red-200 space-y-1">
-          <p className="font-bold text-sm text-red-100">Reject request for "{request.bookTitle}"?</p>
-          <p className="text-xs text-red-300">
-            Student: {request.studentName || request.requestedBy}
+        <p className="text-sm font-medium text-white">
+          Are you sure you want to reject this request?
+        </p>
+
+        <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-800/40 text-red-200 space-y-1">
+          <p className="font-bold text-xs text-red-100">Request: "{request.bookTitle || 'Book'}"</p>
+          <p className="text-[11px] text-red-300">
+            Student: {request.studentName || request.requestedBy || 'Student'}
           </p>
         </div>
 
@@ -66,8 +84,21 @@ export const RejectModal = ({
           </div>
         </div>
 
+        {/* Text box if "Other" is selected */}
+        {rejectReason === 'Other' && (
+          <div className="pt-2">
+            <Input
+              label="Custom Rejection Reason"
+              placeholder="Enter specific rejection details..."
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              required
+            />
+          </div>
+        )}
+
         <div className="pt-4 border-t border-[#2A2A2A] flex justify-end gap-2">
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button variant="secondary" size="sm" disabled={isProcessing} onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -75,7 +106,8 @@ export const RejectModal = ({
             size="sm"
             icon={FiXCircle}
             loading={isProcessing}
-            onClick={onConfirm}
+            disabled={isProcessing}
+            onClick={handleFormSubmit}
           >
             Reject Request
           </Button>
