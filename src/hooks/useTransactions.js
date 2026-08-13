@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   subscribeToTransactions, 
   issueBookTransaction, 
@@ -11,6 +12,9 @@ import { toast } from 'react-hot-toast';
 
 export const useTransactions = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const urlFilter = searchParams.get('filter');
 
   const [rawTransactions, setRawTransactions] = useState([]);
   const [rawRequests, setRawRequests] = useState([]);
@@ -18,11 +22,11 @@ export const useTransactions = () => {
   const [error, setError] = useState(null);
 
   // Active Tab: 'pending_issue' | 'active_borrowings' | 'history'
-  const [activeTab, setActiveTab] = useState('pending_issue');
+  const [activeTab, setActiveTab] = useState(() => urlTab || 'pending_issue');
 
-  // Search & Filters for History Tab
+  // Search & Filters for History / Active Tab
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => urlFilter || 'all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
@@ -33,6 +37,16 @@ export const useTransactions = () => {
   const [isIssuing, setIsIssuing] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
+
+  // Sync state with URL params when deep linked
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+    if (urlFilter && urlFilter !== statusFilter) {
+      setStatusFilter(urlFilter);
+    }
+  }, [urlTab, urlFilter]);
 
   // Realtime Subscriptions
   useEffect(() => {
@@ -68,31 +82,55 @@ export const useTransactions = () => {
 
   // Filter 2: Active Borrowings (Transactions currently issued or extended)
   const activeBorrowings = useMemo(() => {
-    return rawTransactions.filter(
+    const now = new Date();
+    const list = rawTransactions.filter(
       (t) => (t.status || '').toLowerCase() === 'issued' || (t.status || '').toLowerCase() === 'extended'
     );
-  }, [rawTransactions]);
+
+    if (urlFilter === 'overdue' || statusFilter === 'overdue') {
+      return list.filter((t) => {
+        const due = t.dueDate ? (t.dueDate.toDate ? t.dueDate.toDate() : new Date(t.dueDate)) : null;
+        return due && now > due;
+      });
+    }
+    return list;
+  }, [rawTransactions, urlFilter, statusFilter]);
 
   // Filter 3: History Transactions (Completed / Returned / Lost / Damaged)
   const historyTransactions = useMemo(() => {
-    return rawTransactions.filter((t) => {
+    const todayStr = new Date().toDateString();
+    const list = rawTransactions.filter((t) => {
       const st = (t.status || '').toLowerCase();
       return st !== 'issued' && st !== 'extended';
     });
-  }, [rawTransactions]);
+
+    if (urlFilter === 'returned_today' || statusFilter === 'returned_today') {
+      return list.filter((t) => {
+        if ((t.status || '').toLowerCase() !== 'returned') return false;
+        const retDate = t.returnDate ? (t.returnDate.toDate ? t.returnDate.toDate() : new Date(t.returnDate)) : null;
+        return retDate && retDate.toDateString() === todayStr;
+      });
+    }
+    return list;
+  }, [rawTransactions, urlFilter, statusFilter]);
 
   // Compute Statistics
   const stats = useMemo(() => {
     const todayStr = new Date().toDateString();
 
-    const currentlyIssued = activeBorrowings.length;
+    const currentlyIssued = rawTransactions.filter(
+      (t) => (t.status || '').toLowerCase() === 'issued' || (t.status || '').toLowerCase() === 'extended'
+    ).length;
+
     const returnedToday = rawTransactions.filter((t) => {
-      if (t.status !== 'returned') return false;
+      if ((t.status || '').toLowerCase() !== 'returned') return false;
       const d = t.returnDate ? (t.returnDate.toDate ? t.returnDate.toDate() : new Date(t.returnDate)) : null;
       return d && d.toDateString() === todayStr;
     }).length;
 
-    const overdueCount = activeBorrowings.filter((t) => {
+    const overdueCount = rawTransactions.filter((t) => {
+      const st = (t.status || '').toLowerCase();
+      if (st !== 'issued' && st !== 'extended') return false;
       const due = t.dueDate ? (t.dueDate.toDate ? t.dueDate.toDate() : new Date(t.dueDate)) : null;
       return due && new Date() > due;
     }).length;
@@ -103,7 +141,7 @@ export const useTransactions = () => {
       returnedToday,
       overdueCount,
     };
-  }, [pendingIssueRequests, activeBorrowings, rawTransactions]);
+  }, [pendingIssueRequests, rawTransactions]);
 
   // Handler: Issue Book from Approved Request
   const handleIssueApprovedRequest = async (approvedReq) => {

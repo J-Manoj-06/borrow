@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   subscribeToBorrowRequests, 
   fetchBookAvailability, 
@@ -13,6 +14,8 @@ import { isPendingRequest, isApprovedRequest, isRejectedRequest } from '../utils
 
 export const useBorrowRequests = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlStatus = searchParams.get('status');
 
   // Firestore statistics hook
   const {
@@ -30,9 +33,9 @@ export const useBorrowRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Search & Filter state
+  // Search & Filter state initialized from URL query params
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState(() => urlStatus || 'All');
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
@@ -47,6 +50,13 @@ export const useBorrowRequests = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('Book Currently Unavailable');
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Sync statusFilter with URL search params when deep linked
+  useEffect(() => {
+    if (urlStatus && urlStatus !== statusFilter) {
+      setStatusFilter(urlStatus);
+    }
+  }, [urlStatus]);
 
   // Subscriptions
   useEffect(() => {

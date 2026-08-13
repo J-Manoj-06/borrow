@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageContainer from '../layout/PageContainer';
 import SectionHeader from '../components/SectionHeader';
 import Button from '../components/Button';
@@ -28,6 +29,7 @@ import {
 } from 'react-icons/fi';
 
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const { 
     stats, 
     recentRequests, 
@@ -67,7 +69,7 @@ export const Dashboard = () => {
         </div>
       )}
 
-      {/* 1. Statistics Cards Grid (6 Metric Cards) */}
+      {/* 1. Statistics Cards Grid (6 Metric Cards with Interactive Deep-Linking) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         {loading ? (
           <>
@@ -80,44 +82,61 @@ export const Dashboard = () => {
           </>
         ) : (
           <>
+            {/* 1. Total Books */}
             <StatCard
               title="Total Books"
               value={stats.totalBooks}
               icon={FiBookOpen}
               description="Cataloged library items"
+              onClick={() => navigate('/inventory?status=all')}
             />
+
+            {/* 2. Available Books */}
             <StatCard
               title="Available Books"
               value={stats.availableBooks}
               icon={FiCheckCircle}
               indicatorColor="green"
               description="Ready for immediate issue"
+              onClick={() => navigate('/inventory?status=available')}
             />
+
+            {/* 3. Books Issued */}
             <StatCard
               title="Books Issued"
               value={stats.booksIssued}
               icon={FiRepeat}
               description="Currently out on loan"
+              onClick={() => navigate('/transactions?tab=active_borrowings')}
             />
+
+            {/* 4. Pending Requests */}
             <StatCard
               title="Pending Requests"
               value={stats.pendingRequests}
               icon={FiClock}
               indicatorColor="orange"
               description="Awaiting librarian review"
+              onClick={() => navigate('/borrow-requests?status=Pending')}
             />
+
+            {/* 5. Overdue Books */}
             <StatCard
               title="Overdue Books"
               value={stats.overdueBooks}
               icon={FiAlertTriangle}
               indicatorColor="red"
               description="Past return due date"
+              onClick={() => navigate('/transactions?tab=active_borrowings&filter=overdue')}
             />
+
+            {/* 6. Returned Today */}
             <StatCard
               title="Returned Today"
               value={stats.returnedToday}
               icon={FiRotateCcw}
               description="Books checked back in"
+              onClick={() => navigate('/transactions?tab=history&filter=returned_today')}
             />
           </>
         )}

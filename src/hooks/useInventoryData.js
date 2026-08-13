@@ -1,14 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { subscribeToBooksInventory } from '../services/inventoryService';
 
 export const useInventoryData = () => {
+  const [searchParams] = useSearchParams();
+  const urlStatus = searchParams.get('status');
+
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Search & Filter state
+  // Search & Filter state initialized from URL query params
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => urlStatus || 'all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [languageFilter, setLanguageFilter] = useState('all');
@@ -37,6 +41,13 @@ export const useInventoryData = () => {
       console.warn('LocalStorage unavailable:', e);
     }
   };
+
+  // Sync statusFilter with URL query params when deep linked
+  useEffect(() => {
+    if (urlStatus && urlStatus !== statusFilter) {
+      setStatusFilter(urlStatus);
+    }
+  }, [urlStatus]);
 
   // Subscribe to Firestore books
   useEffect(() => {
@@ -85,8 +96,8 @@ export const useInventoryData = () => {
       // 2. Status Filter
       if (statusFilter !== 'all') {
         const status = (book.status || 'available').toLowerCase();
-        if (statusFilter === 'available' && status !== 'available' && book.availableCopies <= 0) return false;
-        if (statusFilter === 'borrowed' && status !== 'borrowed' && book.availableCopies > 0) return false;
+        if (statusFilter === 'available' && status !== 'available' && (book.availableCopies ?? 0) <= 0) return false;
+        if (statusFilter === 'borrowed' && status !== 'borrowed' && (book.availableCopies ?? 0) > 0) return false;
         if (statusFilter === 'maintenance' && status !== 'maintenance') return false;
         if (statusFilter === 'archived' && status !== 'archived') return false;
       }
