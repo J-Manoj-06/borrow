@@ -13,7 +13,7 @@ import DeleteConfirmModal from '../components/Inventory/DeleteConfirmModal';
 import Pagination from '../components/Inventory/Pagination';
 import InventorySkeleton from '../components/Inventory/InventorySkeleton';
 import useInventoryData from '../hooks/useInventoryData';
-import { FiPlus, FiBookOpen, FiAlertCircle } from 'react-icons/fi';
+import { FiPlus, FiBookOpen, FiAlertCircle, FiUploadCloud } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 
 export const Inventory = () => {
@@ -67,14 +67,24 @@ export const Inventory = () => {
         title="Inventory"
         subtitle="Manage and organize your library collection."
       >
-        <Button
-          variant="primary"
-          size="sm"
-          icon={FiPlus}
-          onClick={handleAddFirstBookUI}
-        >
-          Add New Book
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={FiUploadCloud}
+            onClick={() => navigate('/inventory/bulk-upload')}
+          >
+            Bulk Upload
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={FiPlus}
+            onClick={handleAddFirstBookUI}
+          >
+            Add New Book
+          </Button>
+        </div>
       </SectionHeader>
 
       {/* Error Alert */}

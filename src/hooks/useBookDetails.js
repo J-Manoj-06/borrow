@@ -238,7 +238,7 @@ export const useBookDetails = (bookId) => {
     } catch (err) {
       console.error('Update book error:', err);
       toast.error(err.message || 'Failed to update book.');
-    } fontally: {
+    } finally {
       setIsSaving(false);
       setIsUploadingImage(false);
     }

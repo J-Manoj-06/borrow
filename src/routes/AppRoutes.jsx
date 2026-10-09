@@ -10,6 +10,7 @@ const Login = lazy(() => import('../pages/Login'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Inventory = lazy(() => import('../pages/Inventory'));
 const AddBook = lazy(() => import('../pages/AddBook'));
+const BulkUpload = lazy(() => import('../pages/BulkUpload'));
 const BookDetails = lazy(() => import('../pages/BookDetails'));
 const BorrowRequests = lazy(() => import('../pages/BorrowRequests'));
 const Transactions = lazy(() => import('../pages/Transactions'));
@@ -33,6 +34,8 @@ export const AppRoutes = () => {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/inventory/add" element={<AddBook />} />
+              <Route path="/inventory/bulk-upload" element={<BulkUpload />} />
+              <Route path="/bulk-upload" element={<Navigate to="/inventory/bulk-upload" replace />} />
               <Route path="/inventory/:bookId" element={<BookDetails />} />
               <Route path="/borrow-requests" element={<BorrowRequests />} />
               <Route path="/requests" element={<Navigate to="/borrow-requests" replace />} />

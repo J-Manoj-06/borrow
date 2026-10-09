@@ -13,6 +13,7 @@ import {
   FiSettings, 
   FiLogOut, 
   FiBook, 
+  FiUploadCloud,
   FiX 
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
@@ -23,6 +24,7 @@ import Avatar from '../components/Avatar';
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: FiGrid },
   { name: 'Inventory', path: '/inventory', icon: FiBookOpen },
+  { name: 'Bulk Upload', path: '/inventory/bulk-upload', icon: FiUploadCloud },
   { name: 'Borrow Requests', path: '/borrow-requests', icon: FiClock },
   { name: 'Transactions', path: '/transactions', icon: FiRepeat },
   { name: 'Users', path: '/users', icon: FiUsers },
